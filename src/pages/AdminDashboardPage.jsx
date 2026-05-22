@@ -1,0 +1,332 @@
+import { useEffect, useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useCurrency } from "../context/CurrencyContext.jsx";
+import { isKiranGrandAdmin } from "../utils/kiranAdmin.js";
+import MagicAmazonImportPanel from "../components/admin/MagicAmazonImportPanel.jsx";
+import AdminSellerManagementPanel from "../components/admin/AdminSellerManagementPanel.jsx";
+import AdminPendingInventoryPanel from "../components/admin/AdminPendingInventoryPanel.jsx";
+import AdminAutomationLogsPanel from "../components/admin/AdminAutomationLogsPanel.jsx";
+import AdminSalesAnalyticsPanel from "../components/admin/AdminSalesAnalyticsPanel.jsx";
+import AdminCatalogStatsPanel from "../components/admin/AdminCatalogStatsPanel.jsx";
+import SourceVendorBadge from "../components/legal/SourceVendorBadge.jsx";
+import { apiUrl } from "../utils/apiUrl.js";
+
+export default function AdminDashboardPage() {
+  const { token, user, loading } = useAuth();
+  const { currency } = useCurrency();
+  const [data, setData] = useState(null);
+  const [err, setErr] = useState("");
+  const [copyMsg, setCopyMsg] = useState("");
+  const [tab, setTab] = useState("overview");
+
+  useEffect(() => {
+    if (!token || !isKiranGrandAdmin(user)) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(apiUrl("/api/admin/dashboard"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (!cancelled) setErr(json.message || `Error ${res.status}`);
+          return;
+        }
+        if (!cancelled) setData(json);
+      } catch {
+        if (!cancelled) setErr("Network error");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token, user]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center px-4">
+        <p className="text-base font-medium text-white">Loading dashboard…</p>
+      </div>
+    );
+  }
+
+  if (!token || !isKiranGrandAdmin(user)) {
+    return <Navigate to="/admin/login" replace />;
+  }
+
+  async function copyDelivery(text) {
+    setCopyMsg("");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyMsg("Copied delivery block.");
+      setTimeout(() => setCopyMsg(""), 2500);
+    } catch {
+      setCopyMsg("Could not access clipboard.");
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+      <div className="flex flex-wrap gap-4">
+        <Link to="/" className="text-sm text-neon-cyan hover:underline">
+          ← Home
+        </Link>
+        <Link to="/admin/magic-import" className="text-sm text-neon-cyan hover:underline">
+          Product import (advanced) →
+        </Link>
+        <Link to="/admin/stripe-payout" className="text-sm text-neon-cyan hover:underline">
+          Stripe payout →
+        </Link>
+      </div>
+
+      <h1 className="mt-6 font-display text-2xl font-bold text-white">Super Admin · Kiran</h1>
+      <p className="mt-2 text-sm text-white/55">
+        Signed in as <span className="text-white/90">{user.name}</span> — sellers, inventory approval, catalogue import.
+        {data?.summary?.realCatalogProducts != null ? (
+          <>
+            {" "}
+            ·{" "}
+            <span className="text-teal-200/90">
+              {data.summary.realCatalogProducts} live catalogue SKUs
+            </span>
+            {data.summary.demoCatalogRemaining > 0 ? (
+              <span className="text-amber-200/70">
+                {" "}
+                ({data.summary.demoCatalogRemaining} demo rows pending purge)
+              </span>
+            ) : null}
+          </>
+        ) : null}
+      </p>
+
+      <div className="mt-8 flex flex-wrap gap-2">
+        {[
+          { id: "overview", label: "Overview" },
+          { id: "analytics", label: "Analytics" },
+        ].map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`rounded-full border px-5 py-2 text-xs font-bold uppercase tracking-wider transition ${
+              tab === t.id
+                ? "border-neon-cyan/50 bg-neon-cyan/15 text-neon-cyan"
+                : "border-white/15 text-white/50 hover:text-white"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "analytics" ? (
+        <div className="mt-8 space-y-8">
+          <AdminCatalogStatsPanel inventory={data?.categoryInventory} token={token} />
+          <AdminSalesAnalyticsPanel token={token} />
+        </div>
+      ) : (
+        <>
+      <AdminCatalogStatsPanel inventory={data?.categoryInventory} token={token} />
+
+      <div className="mt-10 grid gap-8 lg:grid-cols-2">
+        <AdminSellerManagementPanel token={token} />
+        <AdminPendingInventoryPanel token={token} />
+      </div>
+
+      <div className="mt-10">
+        <AdminAutomationLogsPanel token={token} />
+      </div>
+
+      <div className="mt-10">
+        <MagicAmazonImportPanel
+          token={token}
+          displayCurrency={currency}
+          loaderText="AI is styling your product for the VIP collection…"
+        />
+      </div>
+
+      {data?.summary && tab === "overview" ? (
+        <>
+        <section className="mt-10 rounded-3xl border border-teal-400/35 bg-gradient-to-br from-teal-500/15 via-white/5 to-transparent p-6 shadow-[0_12px_48px_rgba(45,212,191,0.12)]">
+          <p className="text-xs font-semibold uppercase tracking-widest text-teal-200/80">
+            Withdrawable admin balance
+          </p>
+          <p className="mt-2 font-display text-4xl font-bold text-teal-100 sm:text-5xl">
+            {Number(
+              data.summary.withdrawableBalanceSAR ??
+                data.profit?.withdrawableBalanceSAR ??
+                data.summary.walletBalanceSAR ??
+                0
+            ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{" "}
+            <span className="text-2xl text-teal-200/70">SAR</span>
+          </p>
+          <p className="mt-3 text-sm text-white/50">
+            30% checkout margin credited on each paid order. Customer PayPal captures go to your
+            Business account; this ledger is your internal withdrawable profit.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-6 text-sm">
+            <div>
+              <span className="text-white/40">Lifetime profit </span>
+              <span className="font-semibold text-white/90">
+                {Number(data.summary.totalProfitEarnedSAR ?? 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                SAR
+              </span>
+            </div>
+            <div>
+              <span className="text-white/40">Locked (payouts in flight) </span>
+              <span className="font-semibold text-amber-200/90">
+                {Number(data.summary.lockedMarginSAR ?? 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}{" "}
+                SAR
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            {
+              label: "Total revenue (paid)",
+              value: data.summary.totalRevenue,
+              suffix: " SAR",
+            },
+            {
+              label: "Profit margin earned",
+              value: data.summary.profitMarginEarned ?? data.profit?.marginEarnedSAR ?? 0,
+              suffix: " SAR",
+            },
+            {
+              label: "Pending PayPal payouts",
+              value: data.summary.pendingPayouts ?? data.profit?.pendingPayoutsSAR ?? 0,
+              suffix: " SAR",
+            },
+            {
+              label: "Margin from line items",
+              value: data.summary.marginFromLineItemsSAR ?? 0,
+              suffix: " SAR",
+            },
+          ].map((card) => (
+            <div
+              key={card.label}
+              className="glass-panel rounded-2xl border border-white/10 p-5"
+            >
+              <p className="text-xs font-semibold uppercase tracking-wider text-white/45">
+                {card.label}
+              </p>
+              <p className="mt-2 font-display text-2xl font-bold text-teal-200">
+                {Number(card.value || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                {card.suffix}
+              </p>
+            </div>
+          ))}
+        </section>
+        </>
+      ) : null}
+
+      {data?.profit?.recentPayoutLogs?.length > 0 && tab === "overview" ? (
+        <section className="mt-8 space-y-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/45">
+            Recent profit / payout log
+          </h2>
+          <ul className="space-y-2">
+            {data.profit.recentPayoutLogs.map((row) => (
+              <li
+                key={row.orderId}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm"
+              >
+                <span className="font-mono text-white/85">{row.ksaSerialGlobal}</span>
+                <span className="text-teal-200/90">
+                  {Number(row.profitAmountSAR || 0).toFixed(2)} SAR
+                </span>
+                <span className="text-xs uppercase text-white/40">{row.payoutStatus}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {err && (
+        <p className="mt-6 rounded-xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100/90">
+          {err}
+        </p>
+      )}
+      {copyMsg && <p className="mt-4 text-xs text-teal-200/90">{copyMsg}</p>}
+
+      {tab === "overview" && data?.pendingDropshipOrders && data.pendingDropshipOrders.length > 0 ? (
+        <section className="mt-10 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-teal-200/90">
+            Pending checkout · Purchase on partner
+          </h2>
+          <ul className="space-y-4">
+            {data.pendingDropshipOrders.map((o) => (
+              <li key={o._id} className="glass-panel rounded-2xl border border-teal-500/15 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-sm text-white">{o.ksaSerialGlobal}</p>
+                    <p className="mt-1 text-xs text-white/45">{o.shop?.name}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {o.purchaseUrl ? (
+                      <a
+                        href={o.purchaseUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-xl bg-gradient-to-r from-teal-400 to-cyan-500 px-4 py-2 text-xs font-bold text-charcoal-950"
+                      >
+                        Purchase now
+                      </a>
+                    ) : null}
+                    {o.deliveryClipboard ? (
+                      <button
+                        type="button"
+                        onClick={() => copyDelivery(o.deliveryClipboard)}
+                        className="rounded-xl border border-white/15 bg-white/[0.06] px-4 py-2 text-xs font-medium text-white/90"
+                      >
+                        Copy customer details
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {data?.recentOrders?.length > 0 ? (
+        <section className="mt-10 space-y-4">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-white/45">Recent paid orders</h2>
+          <ul className="space-y-4">
+            {data.recentOrders.map((o) => (
+              <li key={o._id} className="glass-panel rounded-2xl p-5">
+                <p className="font-mono text-sm text-white">{o.ksaSerialGlobal}</p>
+                <ul className="mt-4 space-y-2 border-t border-white/[0.06] pt-3">
+                  {(o.items || []).map((line, i) => (
+                    <li key={i} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="text-white/75">{line.title}</span>
+                      <SourceVendorBadge
+                        label={line.source_store_name_snapshot || line.source_vendor_label_snapshot}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+        </>
+      )}
+    </div>
+  );
+}

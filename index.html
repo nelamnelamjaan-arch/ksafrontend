@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#050508" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="KSA Store" />
+    <title>KSA Store — Premium Online Shopping in Saudi Arabia</title>
+    <meta
+      name="description"
+      content="Shop groceries, pharmacy, jewellery, gourmet imports &amp; global brands with fast delivery across Riyadh, Jeddah, Dammam &amp; KSA. Authentic products, secure checkout."
+    />
+    <meta
+      name="keywords"
+      content="KSA Store, Saudi Arabia online shopping, Riyadh delivery, Jeddah ecommerce, grocery delivery KSA, pharmacy online Saudi, imported products"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="KSA Store" />
+    <meta property="og:image" content="/favicon.svg" />
+    <meta property="og:title" content="KSA Store — Premium Online Shopping in Saudi Arabia" />
+    <meta
+      property="og:description"
+      content="Shop groceries, pharmacy, jewellery, gourmet imports &amp; global brands with fast delivery across Saudi Arabia."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="KSA Store — Premium Online Shopping in Saudi Arabia" />
+    <meta
+      name="twitter:description"
+      content="Authentic products, secure checkout, nationwide delivery across KSA."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://ksa.store/#organization",
+            "name": "KSA Store",
+            "url": "https://ksa.store/",
+            "logo": "https://ksa.store/favicon.svg",
+            "description": "Premium Saudi e-commerce marketplace — groceries, pharmacy, jewellery, gourmet & global imports.",
+            "areaServed": ["SA", "AE", "PK"],
+            "sameAs": []
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://ksa.store/#website",
+            "url": "https://ksa.store/",
+            "name": "KSA Store",
+            "publisher": { "@id": "https://ksa.store/#organization" },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://ksa.store/browse?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
