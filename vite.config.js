@@ -4,14 +4,18 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Repo root (parent of `client/`) — same `.env` as the API uses.
-const repoRoot = path.resolve(__dirname, "..");
+const clientDir = __dirname;
+// Monorepo root (parent of `client/`) — optional local `.env` when developing in the full repo.
+const repoRoot = path.resolve(clientDir, "..");
 
 export default defineConfig(({ mode }) => {
-  loadEnv(mode, repoRoot, "");
+  loadEnv(mode, clientDir, "");
+  if (mode !== "production") {
+    loadEnv(mode, repoRoot, "");
+  }
   return {
-    // Load `.env*` from monorepo root so `VITE_*` keys live next to server vars.
-    envDir: repoRoot,
+    // Standalone Vercel client repo: read `client/.env*` only. Monorepo dev still picks up parent vars above.
+    envDir: clientDir,
     plugins: [react()],
     optimizeDeps: {
       include: [
