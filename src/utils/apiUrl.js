@@ -47,7 +47,9 @@ export function apiUrl(path) {
 export function getSocketRoot() {
   const explicit = import.meta.env.VITE_SOCKET_URL;
   if (explicit != null && String(explicit).trim() !== "") {
-    return String(explicit).replace(/\/+$/, "");
+    const root = String(explicit).replace(/\/+$/, "");
+    if (import.meta.env.PROD && isLocalDevOrigin(root)) return "";
+    return root;
   }
   const api = getApiOrigin();
   if (api) return api;
